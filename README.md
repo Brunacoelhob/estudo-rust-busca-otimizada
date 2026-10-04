@@ -1,136 +1,85 @@
-# Projeto: Sistema de Busca com HashMap
+# Busca Otimizada em Rust
 
-## 📖 Descrição do Projeto
-Este projeto implementa um sistema de busca eficiente utilizando a linguagem **Rust** e a estrutura de dados `HashMap`. O objetivo é resolver o problema de indexação e recuperação rápida de dados enfrentado pela **MegaStore**, garantindo eficiência, escalabilidade e segurança.
+[![CI](https://github.com/Brunacoelhob/estudo-rust-busca-otimizada/actions/workflows/ci.yml/badge.svg)](https://github.com/Brunacoelhob/estudo-rust-busca-otimizada/actions/workflows/ci.yml)
+![Rust](https://img.shields.io/badge/rust-2024-orange)
+![License](https://img.shields.io/badge/license-MIT-blue)
 
-## 🛠️ Tecnologias Utilizadas
-- **Linguagem**: Rust
-- **Bibliotecas padrão**: `std::collections::HashMap`
-- **Ferramentas**: `cargo` para gerenciamento de pacotes e execução
+Busca em catálogo de produtos com **índice invertido**, sem dependências externas. Nasceu como solução para o problema de indexação e recuperação rápida de uma loja ("MegaStore") e evoluiu de um `HashMap` de busca exata para uma busca de verdade.
 
-## 🚀 Instruções de Compilação e Execução
-1. Certifique-se de ter o Rust instalado. Caso não tenha, instale-o através do [Rustup](https://rustup.rs/).
-2. Clone este repositório:
-   ```bash
-   git clone <URL_DO_REPOSITORIO>
-   cd projeto
-   ```
-3. Compile e execute o projeto:
-   ```bash
-   cargo run
-   ```
+## O que ela faz
 
-## 🧪 Instruções de Testes
-Para rodar os testes automatizados, utilize o comando:
+| Consulta | Acha |
+|---|---|
+| `note gam` | "Notebook Gamer" (prefixos, **todos** os termos precisam casar) |
+| `ELETRÔNICOS` | produtos da categoria "Eletrônicos" (ignora maiúsculas e acentos) |
+| `techtop` | produtos da marca TechTop (busca em nome, marca **e** categoria) |
+
+Resultados ordenados por **relevância**: termo no nome (peso 3) > marca (2) > categoria (1); empate resolvido por id.
+
+## Por que um índice invertido?
+
+A versão original guardava `HashMap<texto completo → produtos>`: só achava "Notebook Gamer" se você digitasse exatamente "Notebook Gamer". Agora cada produto é quebrado em termos e cada termo aponta para os produtos que o contêm:
+
+```
+"notebook" → {1}        "gamer" → {1, 3}        "techtop" → {1, 3}
+```
+
+Um `BTreeMap` ordenado permite achar todos os termos de um prefixo em `O(log n + k)`. Inserir e remover são `O(t · log n)`, com limpeza de termos órfãos (nada de lixo ao atualizar um produto).
+
+## Uso
+
+```rust
+use busca_otimizada::{IndiceDeBusca, Produto};
+
+let mut indice = IndiceDeBusca::new();
+indice.adicionar(Produto::novo(1, "Notebook Gamer", "TechTop", "Informática"));
+
+let achados = indice.buscar("note gam");
+assert_eq!(achados[0].id, 1);
+
+indice.buscar_limitado("gamer", 10); // no máximo 10 resultados
+indice.remover(1);
+```
+
+Adicionar um produto com `id` já existente o **substitui** (e devolve o antigo).
+
+### Linha de comando
+
+```bash
+cargo run -- note gam
+cargo run -- eletrônicos
+```
+
+## Desenvolvimento
+
+Requer Rust 1.85+ (edição 2024).
+
 ```bash
 cargo test
+cargo fmt --check
+cargo clippy --all-targets -- -D warnings
 ```
 
-## 📂 Estrutura do Projeto
+14 testes cobrem relevância, acentos, múltiplos termos, limite, substituição, remoção sem lixo e um catálogo de 20 mil produtos.
+
+## Estrutura
+
 ```
-projeto/
-├── src/
-│   ├── main.rs        # Arquivo principal
-│   ├── lib.rs         # Lógica do sistema
-├── tests/             # Testes automatizados
-├── Cargo.toml         # Configuração do projeto
-└── README.md          # Documentação
-```
-
-## 🧠 Explicação da Arquitetura
-O sistema utiliza um `HashMap` para indexar e buscar dados de forma eficiente. A escolha dessa estrutura se deve à sua complexidade de tempo média de O(1) para operações de inserção e busca.
-
-## 📊 Análise de Desempenho
-- **Eficiência**: O uso de `HashMap` garante buscas rápidas, mesmo com grandes volumes de dados.
-- **Escalabilidade**: A solução pode ser expandida para suportar novos critérios de busca, como marca e categoria.
-- **Segurança**: O Rust oferece segurança de memória e prevenção de condições de corrida.
-
-## 💡 Exemplos de Uso
-```rust
-use std::collections::HashMap;
-
-fn main() {
-    let mut sistema = HashMap::new();
-    sistema.insert("produto1", "descrição1");
-    sistema.insert("produto2", "descrição2");
-
-    if let Some(descricao) = sistema.get("produto1") {
-        println!("Descrição encontrada: {}", descricao);
-    }
-}
+src/
+├── lib.rs       # API pública (com doctest)
+├── indice.rs    # índice invertido, busca e testes
+├── produto.rs   # modelo de dados
+├── texto.rs     # normalização e tokenização
+└── main.rs      # demonstração em linha de comando
+tests/integracao.rs
 ```
 
-## 📜 Licença
-Este projeto está licenciado sob a licença MIT. Consulte o arquivo `LICENSE` para mais detalhes.
+## Limitações
 
-## 🤝 Contribuição
-Contribuições são bem-vindas! Sinta-se à vontade para abrir issues ou enviar pull requests.
+- O índice vive em memória (adequado para catálogos de dezenas/centenas de milhares de itens).
+- A remoção de acentos cobre as letras do português e algumas comuns em outros idiomas latinos; não é uma normalização Unicode completa.
+- Não há correção ortográfica nem busca por similaridade.
 
----
+## Licença
 
-Se precisar de algo mais, como o template do relatório técnico, é só avisar! 😊# Projeto: Sistema de Busca com HashMap
-
-## 📖 Descrição do Projeto
-Este projeto implementa um sistema de busca eficiente utilizando a linguagem **Rust** e a estrutura de dados `HashMap`. O objetivo é resolver o problema de indexação e recuperação rápida de dados enfrentado pela **MegaStore**, garantindo eficiência, escalabilidade e segurança.
-
-## 🛠️ Tecnologias Utilizadas
-- **Linguagem**: Rust
-- **Bibliotecas padrão**: `std::collections::HashMap`
-- **Ferramentas**: `cargo` para gerenciamento de pacotes e execução
-
-## 🚀 Instruções de Compilação e Execução
-1. Certifique-se de ter o Rust instalado. Caso não tenha, instale-o através do [Rustup](https://rustup.rs/).
-2. Clone este repositório:
-   ```bash
-   git clone <URL_DO_REPOSITORIO>
-   cd projeto
-   ```
-3. Compile e execute o projeto:
-   ```bash
-   cargo run
-   ```
-
-## 🧪 Instruções de Testes
-Para rodar os testes automatizados, utilize o comando:
-```bash
-cargo test
-```
-
-## 📂 Estrutura do Projeto
-```
-projeto/
-├── src/
-│   ├── main.rs        # Arquivo principal
-│   ├── lib.rs         # Lógica do sistema
-├── tests/             # Testes automatizados
-├── Cargo.toml         # Configuração do projeto
-└── README.md          # Documentação
-```
-
-## 🧠 Explicação da Arquitetura
-O sistema utiliza um `HashMap` para indexar e buscar dados de forma eficiente. A escolha dessa estrutura se deve à sua complexidade de tempo média de O(1) para operações de inserção e busca.
-
-## 📊 Análise de Desempenho
-- **Eficiência**: O uso de `HashMap` garante buscas rápidas, mesmo com grandes volumes de dados.
-- **Escalabilidade**: A solução pode ser expandida para suportar novos critérios de busca, como marca e categoria.
-- **Segurança**: O Rust oferece segurança de memória e prevenção de condições de corrida.
-
-## 💡 Exemplos de Uso
-```rust
-use std::collections::HashMap;
-
-fn main() {
-    let mut sistema = HashMap::new();
-    sistema.insert("produto1", "descrição1");
-    sistema.insert("produto2", "descrição2");
-
-    if let Some(descricao) = sistema.get("produto1") {
-        println!("Descrição encontrada: {}", descricao);
-    }
-}
-```
-
-## 🤝 Contribuição
-Contribuições são bem-vindas! Sinta-se à vontade para abrir issues ou enviar pull requests.
-
----
+[MIT](LICENSE)

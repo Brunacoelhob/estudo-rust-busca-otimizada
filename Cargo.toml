@@ -1,6 +1,21 @@
 [package]
-name = "projeto"
-version = "0.1.0"
+name = "busca-otimizada"
+version = "0.2.0"
 edition = "2024"
+description = "Busca em catálogo com índice invertido (prefixo, sem acento, relevância), sem dependências"
+license = "MIT"
+repository = "https://github.com/Brunacoelhob/estudo-rust-busca-otimizada"
 
 [dependencies]
+
+[lib]
+name = "busca_otimizada"
+path = "src/lib.rs"
+
+[[bin]]
+name = "busca-otimizada"
+path = "src/main.rs"
+
+[profile.release]
+lto = true
+codegen-units = 1
